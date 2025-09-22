@@ -90,8 +90,9 @@ const App = () => {
   };
 
   const handleToggleSprinklerBuffers = () => {
+    const next = !showSprinklerBuffers;
     toggleSprinklerBuffers();
-    setStatus(`散水円を${showSprinklerBuffers ? '非表示' : '表示'}に切り替えました。`);
+    setStatus(`散水円を${next ? '表示' : '非表示'}に切り替えました。`);
     setError(null);
   };
 

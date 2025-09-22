@@ -44,7 +44,8 @@ const farmerSchema = z.object({
 
 const farmerShareSchema = z.object({
   farmerId: z.string(),
-  share: z.number().min(0).max(1)
+  share: z.number().min(0).max(1),
+  computedShare: z.number().min(0).max(1).optional()
 });
 
 const faucetSchema = z.object({

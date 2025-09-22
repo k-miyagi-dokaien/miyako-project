@@ -14,6 +14,7 @@ export type Farmer = {
 export type FarmerShare = {
   farmerId: Id;
   share: number; // 0-1 representing portion of faucet usage
+  computedShare?: number; // 0-1 derived from auto-calculation
 };
 
 export type FaucetFeature = {

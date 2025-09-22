@@ -16,14 +16,17 @@ const FaucetInspector = ({ feature }: { feature: FaucetFeature }) => {
   };
 
   const handleShareChange = (index: number, key: 'farmerId' | 'share', value: string) => {
-    const updatedShares = feature.farmerShares.map((share, idx) =>
-      idx === index
-        ? {
-            ...share,
-            [key]: key === 'share' ? Number(value) : value
-          }
-        : share
-    );
+    const updatedShares = feature.farmerShares.map((share, idx) => {
+      if (idx !== index) {
+        return share;
+      }
+      if (key === 'share') {
+        const percent = Number(value);
+        const normalized = Number.isFinite(percent) ? Math.max(percent, 0) / 100 : 0;
+        return { ...share, share: normalized };
+      }
+      return { ...share, farmerId: value, computedShare: undefined };
+    });
     handleChange('farmerShares', updatedShares);
   };
 
@@ -34,7 +37,7 @@ const FaucetInspector = ({ feature }: { feature: FaucetFeature }) => {
     }
     handleChange('farmerShares', [
       ...feature.farmerShares,
-      { farmerId: fallbackFarmerId, share: 0 }
+      { farmerId: fallbackFarmerId, share: 0, computedShare: 0 }
     ]);
   };
 
@@ -46,6 +49,10 @@ const FaucetInspector = ({ feature }: { feature: FaucetFeature }) => {
   };
 
   const shareTotal = feature.farmerShares.reduce((sum, share) => sum + share.share, 0);
+  const computedShareTotal = feature.farmerShares.reduce(
+    (sum, share) => sum + (share.computedShare ?? 0),
+    0
+  );
 
   return (
     <div className="space-y-3">
@@ -110,15 +117,25 @@ const FaucetInspector = ({ feature }: { feature: FaucetFeature }) => {
                     </option>
                   ))}
                 </select>
-                <input
-                  type="number"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={share.share}
-                  onChange={(event) => handleShareChange(index, 'share', event.target.value)}
-                  className="w-24 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-right text-slate-100 focus:border-sky-500 focus:outline-none"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={
+                      Number.isFinite(share.share)
+                        ? Math.round(share.share * 10000) / 100
+                        : 0
+                    }
+                    onChange={(event) => handleShareChange(index, 'share', event.target.value)}
+                    className="w-24 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-right text-slate-100 focus:border-sky-500 focus:outline-none"
+                  />
+                  <span className="text-xs text-slate-400">%</span>
+                </div>
+                <div className="w-32 text-right text-xs text-slate-400">
+                  計算値 {((share.computedShare ?? 0) * 100).toFixed(1)}%
+                </div>
                 <button
                   type="button"
                   onClick={() => removeShare(index)}
@@ -130,9 +147,15 @@ const FaucetInspector = ({ feature }: { feature: FaucetFeature }) => {
             </Fragment>
           ))}
         </div>
-        <p className="mt-1 text-xs text-slate-400">
-          合計: <span className={shareTotal > 1.01 ? 'text-rose-300' : ''}>{shareTotal.toFixed(2)}</span>
-        </p>
+        <div className="mt-1 space-y-1 text-xs text-slate-400">
+          <p>
+            入力合計:{' '}
+            <span className={shareTotal > 1.01 ? 'text-rose-300' : ''}>
+              {(shareTotal * 100).toFixed(1)}%
+            </span>
+          </p>
+          <p>計算合計: {(computedShareTotal * 100).toFixed(1)}%</p>
+        </div>
       </div>
       <div className="rounded border border-slate-800 bg-slate-900/50 p-2 text-xs text-slate-400">
         位置: {formatCoordinate(feature.geometry.geometry.coordinates[1])},

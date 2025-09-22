@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 import type {
   DrawMode,
   Farmer,
+  FarmerShare,
   FaucetFeature,
   MapView,
   ParcelFeature,
@@ -150,7 +151,14 @@ export const useAppStore = create<AppState>()(
         set({
           mapView: data.map,
           farmers: data.farmers,
-          faucets: data.faucets,
+          faucets: data.faucets.map((faucet) => ({
+            ...faucet,
+            farmerShares: faucet.farmerShares.map((share) => ({
+              ...share,
+              computedShare:
+                typeof share.computedShare === 'number' ? share.computedShare : share.share
+            }))
+          })),
           sprinklers: data.sprinklers,
           parcels: data.parcels.map((parcel) => ({
             ...parcel,
@@ -167,21 +175,44 @@ export const useAppStore = create<AppState>()(
           const shareMap = calculateFaucetShares(state.sprinklers, state.parcels);
           const updatedFaucets = state.faucets.map((faucet) => {
             const computedShares = shareMap.get(faucet.id);
+            const existingMap = new Map(faucet.farmerShares.map((share) => [share.farmerId, share]));
             if (!computedShares) {
-              if (faucet.farmerShares.length === 0) {
-                return faucet;
-              }
               return {
                 ...faucet,
-                farmerShares: []
+                farmerShares: faucet.farmerShares.map((share) => ({
+                  ...share,
+                  computedShare: share.computedShare
+                }))
               };
             }
+            const nextShares: FarmerShare[] = computedShares.map((item) => {
+              const existing = existingMap.get(item.farmerId);
+              const computedValue = Number(item.share.toFixed(6));
+              if (existing) {
+                existingMap.delete(item.farmerId);
+                return {
+                  ...existing,
+                  share:
+                    typeof existing.share === 'number'
+                      ? existing.share
+                      : computedValue,
+                  computedShare: computedValue
+                };
+              }
+              return {
+                farmerId: item.farmerId,
+                share: computedValue,
+                computedShare: computedValue
+              };
+            });
+
+            existingMap.forEach((share) => {
+              nextShares.push({ ...share });
+            });
+
             return {
               ...faucet,
-              farmerShares: computedShares.map((item) => ({
-                farmerId: item.farmerId,
-                share: Number(item.share.toFixed(6))
-              }))
+              farmerShares: nextShares
             };
           });
           return { faucets: updatedFaucets };
