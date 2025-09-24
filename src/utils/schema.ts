@@ -24,16 +24,18 @@ const polygonGeometrySchema = z.object({
   )
 });
 
+const propertiesSchema = z.union([z.record(z.any()), z.null()]).optional();
+
 const pointFeatureSchema = z.object({
   type: z.literal('Feature'),
   geometry: pointGeometrySchema,
-  properties: z.record(z.any()).optional()
+  properties: propertiesSchema
 });
 
 const polygonFeatureSchema = z.object({
   type: z.literal('Feature'),
   geometry: polygonGeometrySchema,
-  properties: z.record(z.any()).optional()
+  properties: propertiesSchema
 });
 
 const farmerSchema = z.object({
